@@ -1,0 +1,117 @@
+{
+  "name": "snapshot-safe-sync",
+  "version": "1.0.0",
+  "description": "Synchronize Snapshot ⚡ and Safe{Wallet} backends for offchain signatures",
+  "main": "lib/index.js",
+  "bin": "lib/cli.js",
+  "files": [
+    "lib/**/*"
+  ],
+  "scripts": {
+    "build": "tsc --build ./tsconfig.build.json",
+    "prepare": "husky install",
+    "typecheck": "tsc --noEmit",
+    "lint": "prettier --check src",
+    "lint:fix": "prettier --write src",
+    "cli": "ts-node src/cli.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/morpho-labs/snapshot-safe-synchronizer.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Morpho Labs",
+    "email": "security@morpho.xyz",
+    "url": "https://github.com/morpho-labs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "gnosis",
+    "safe",
+    "message",
+    "EIP-1271",
+    "snapshot",
+    "offchain",
+    "signature"
+  ],
+  "bugs": {
+    "url": "https://github.com/morpho-labs/snapshot-safe-synchronizer/issues"
+  },
+  "homepage": "https://github.com/morpho-labs/snapshot-safe-synchronizer#readme",
+  "dependencies": {
+    "@inquirer/prompts": "^2.1.1",
+    "@snapshot-labs/snapshot.js": "^0.5.4",
+    "@types/node": "^20.5.2",
+    "ethers": "^5.7.2",
+    "ts-node": "^10.9.1"
+  },
+  "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^4.1.1",
+    "@types/command-line-args": "^5.2.0",
+    "@types/command-line-usage": "^5.0.2",
+    "commitizen": "^4.3.0",
+    "conventional-changelog-conventionalcommits": "^6.0.0",
+    "cz-conventional-changelog": "^3.3.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^13.2.2",
+    "prettier": "^2.8.8",
+    "typescript": "^5.1.3"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  },
+  "lint-staged": {
+    "*.ts": "prettier"
+  },
+  "release": {
+    "branches": [
+      "main",
+      "next"
+    ],
+    "plugins": [
+      [
+        "@semantic-release/commit-analyzer",
+        {
+          "preset": "conventionalcommits",
+          "releaseRules": [
+            {
+              "type": "build",
+              "scope": "deps",
+              "release": "patch"
+            }
+          ]
+        }
+      ],
+      [
+        "@semantic-release/release-notes-generator",
+        {
+          "preset": "conventionalcommits",
+          "presetConfig": {
+            "types": [
+              {
+                "type": "feat",
+                "section": "Features"
+              },
+              {
+                "type": "fix",
+                "section": "Bug Fixes"
+              },
+              {
+                "type": "build",
+                "section": "Dependencies and Other Build Updates",
+                "hidden": false
+              }
+            ]
+          }
+        }
+      ],
+      "@semantic-release/npm",
+      "@semantic-release/github"
+    ]
+  }
+}
