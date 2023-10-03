@@ -42,3 +42,18 @@ export interface SpaceMessage {
   settings: string;
   timestamp: string;
 }
+
+export interface VoteMessage {
+  app: string;
+  from: string;
+  space: string;
+  choice: string;
+  reason: string;
+  metadata: string;
+  proposal: string;
+  timestamp: string;
+}
+
+export type SafeSnapshotMessage = SafeMessageWrapper<
+  SnapshotMessageWrapper<ProposalMessage | SpaceMessage | VoteMessage>
+>;

@@ -3,7 +3,8 @@ import { getDefaultProvider, utils } from "ethers";
 import snapshot from "@snapshot-labs/snapshot.js";
 
 import { envelope } from "./constants";
-import { ProposalMessage, SafeMessageWrapper, SnapshotMessageWrapper, SpaceMessage } from "./types";
+import { Handlers } from "./snapshotHandlers";
+import { ProposalMessage, SafeSnapshotMessage, SpaceMessage, VoteMessage } from "./types";
 
 const configuration = {
   snapshotHubUrl: "https://hub.snapshot.org",
@@ -18,9 +19,9 @@ const configuration = {
 const resolveAddress = async (ensOrAddressLike: string) => {
   if (utils.isAddress(ensOrAddressLike)) return ensOrAddressLike;
   // support EIP 3770
-  if(ensOrAddressLike.split(":")[0] === configuration.eip3770Prefix) {
+  if (ensOrAddressLike.split(":")[0] === configuration.eip3770Prefix) {
     const address = ensOrAddressLike.split(":")[1];
-    if(!utils.isAddress(address)) throw new Error(`Invalid address ${address}`);
+    if (!utils.isAddress(address)) throw new Error(`Invalid address ${address}`);
     return address;
   }
   // support EIP 2304
@@ -45,14 +46,11 @@ const fetchUrl = (url: string, method = "GET") =>
     return res.json();
   });
 
-type SafeSnapshotMessage = SafeMessageWrapper<
-  SnapshotMessageWrapper<ProposalMessage | SpaceMessage>
->;
 export const fetchAllPotentialsMessages = async (url: string): Promise<SafeSnapshotMessage[]> => {
   const { next, results } = await fetchUrl(url);
 
   const snapshotMessages: SafeSnapshotMessage[] = results.filter(
-    (m: SafeSnapshotMessage) => m.type === "MESSAGE" && m.name === "Snapshot"
+    (m: SafeSnapshotMessage) => m.type === "MESSAGE" && m.message.domain.name === "snapshot"
   );
 
   if (next === null) return snapshotMessages;
@@ -60,7 +58,7 @@ export const fetchAllPotentialsMessages = async (url: string): Promise<SafeSnaps
   const lastMessage = results[results.length - 1];
   const lastMessageTs = lastMessage.timestamp || lastMessage.creationTimestamp;
 
-  if (lastMessageTs && lastMessageTs + configuration.snapshotDelayValidation > Date.now() / 1000) {
+  if (lastMessageTs && lastMessageTs + configuration.snapshotDelayValidation * 1000 > Date.now()) {
     return [...snapshotMessages, ...(await fetchAllPotentialsMessages(next))];
   }
   return snapshotMessages;
@@ -71,7 +69,7 @@ export const syncBackends = async (safeAddressOrEns: string) => {
   console.log(`Synchronizing Snapshot and Safe for ${safeAddressOrEns}`);
   const safeUrl = `${configuration.safeUrl}/v1/chains/${configuration.chainId}/safes/${safeAddress}/messages`;
   const allSnapshotMessages = await fetchAllPotentialsMessages(safeUrl);
-  console.log(allSnapshotMessages.length, "non expired snapshot messages found");
+  console.log(allSnapshotMessages.length, "snapshot messages found");
 
   const fullySignedMessages = allSnapshotMessages.filter(
     (m) => m.status === "CONFIRMED" && m.preparedSignature
@@ -100,10 +98,13 @@ export const syncBackends = async (safeAddressOrEns: string) => {
 
       switch (primaryType) {
         case "Proposal":
-          data = await handleProposal(snapshotMessage.message as ProposalMessage);
+          data = await Handlers.handleProposal(snapshotMessage.message as ProposalMessage);
           break;
         case "Space":
-          data = await handleSpace(snapshotMessage.message as SpaceMessage);
+          data = await Handlers.handleSpace(snapshotMessage.message as SpaceMessage);
+          break;
+        case "Vote":
+          data = await Handlers.handleVote(snapshotMessage.message as VoteMessage);
           break;
         default:
           throw Error(`Unknown primary type ${primaryType}`);
@@ -161,110 +162,4 @@ export const syncBackends = async (safeAddressOrEns: string) => {
     }
   }
   return messageResults;
-};
-const snapshotDomain = {
-  name: "snapshot",
-  version: "0.1.4",
-};
-const handleProposal = async (message: ProposalMessage) => {
-  console.log(`Handling proposal ${message.title}`);
-  const proposalTypes = {
-    Proposal: [
-      {
-        name: "from",
-        type: "address",
-      },
-      {
-        name: "space",
-        type: "string",
-      },
-      {
-        name: "timestamp",
-        type: "uint64",
-      },
-      {
-        name: "type",
-        type: "string",
-      },
-      {
-        name: "title",
-        type: "string",
-      },
-      {
-        name: "body",
-        type: "string",
-      },
-      {
-        name: "discussion",
-        type: "string",
-      },
-      {
-        name: "choices",
-        type: "string[]",
-      },
-      {
-        name: "start",
-        type: "uint64",
-      },
-      {
-        name: "end",
-        type: "uint64",
-      },
-      {
-        name: "snapshot",
-        type: "uint64",
-      },
-      {
-        name: "plugins",
-        type: "string",
-      },
-      {
-        name: "app",
-        type: "string",
-      },
-    ],
-  };
-  return {
-    types: proposalTypes,
-    domain: snapshotDomain,
-    message: {
-      ...message,
-      start: +message.start,
-      end: +message.end,
-      snapshot: +message.snapshot,
-      timestamp: +message.timestamp,
-    },
-  };
-};
-const handleSpace = async (message: SpaceMessage) => {
-  const readableTime = new Date(+message.timestamp * 1000).toLocaleString();
-  console.log(`Handling space ${message.space} submitted at ${readableTime}`);
-  const spaceTypes = {
-    Space: [
-      {
-        name: "from",
-        type: "address",
-      },
-      {
-        name: "space",
-        type: "string",
-      },
-      {
-        name: "timestamp",
-        type: "uint64",
-      },
-      {
-        name: "settings",
-        type: "string",
-      },
-    ],
-  };
-  return {
-    types: spaceTypes,
-    domain: snapshotDomain,
-    message: {
-      ...message,
-      timestamp: +message.timestamp,
-    },
-  };
 };
