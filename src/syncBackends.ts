@@ -50,7 +50,7 @@ export const fetchAllPotentialsMessages = async (url: string): Promise<SafeSnaps
   const { next, results } = await fetchUrl(url);
 
   const snapshotMessages: SafeSnapshotMessage[] = results.filter(
-    (m: SafeSnapshotMessage) => m.type === "MESSAGE" && m.message.domain.name === "snapshot"
+    (m: SafeSnapshotMessage) => m.type === "MESSAGE" && m.message.domain?.name === "snapshot"
   );
 
   if (next === null) return snapshotMessages;
