@@ -1,4 +1,4 @@
-import { getDefaultProvider, utils } from "ethers";
+import { getAddress, isAddress, Provider } from "ethers";
 
 import snapshot from "@snapshot-labs/snapshot.js";
 
@@ -16,23 +16,26 @@ const configuration = {
   eip3770Prefix: "eth",
 };
 
-const resolveAddress = async (ensOrAddressLike: string) => {
-  if (utils.isAddress(ensOrAddressLike)) return ensOrAddressLike;
+const resolveAddress = async (ensOrAddressLike: string, provider: Provider) => {
+  try {
+    return getAddress(ensOrAddressLike.toLowerCase());
+  } catch (e) {
+    // ignore error since it can be an ENS name
+  }
   // support EIP 3770
   if (ensOrAddressLike.split(":")[0] === configuration.eip3770Prefix) {
     const address = ensOrAddressLike.split(":")[1];
-    if (!utils.isAddress(address)) throw new Error(`Invalid address ${address}`);
-    return address;
+
+    return getAddress(address.toLowerCase());
   }
   // support EIP 2304
   if (!ensOrAddressLike.match(/^.*\.eth$/))
-    throw new Error(`Invalid address or ENS name ${ensOrAddressLike}`);
+    throw new Error(`Invalid ENS name ${ensOrAddressLike}`);
 
-  const provider = getDefaultProvider(process.env.RPC_URL);
   const resolvedAddress = await provider.resolveName(ensOrAddressLike);
   if (!resolvedAddress) throw new Error(`Failed to resolve ENS address ${ensOrAddressLike}`);
 
-  return resolvedAddress;
+  return getAddress(resolvedAddress.toLowerCase());
 };
 
 const fetchUrl = (url: string, method = "GET") =>
@@ -64,8 +67,8 @@ export const fetchAllPotentialsMessages = async (url: string): Promise<SafeSnaps
   return snapshotMessages;
 };
 
-export const syncBackends = async (safeAddressOrEns: string) => {
-  const safeAddress = await resolveAddress(safeAddressOrEns);
+export const syncBackends = async (safeAddressOrEns: string, provider: Provider) => {
+  const safeAddress = await resolveAddress(safeAddressOrEns, provider);
   console.log(`Synchronizing Snapshot and Safe for ${safeAddressOrEns}`);
   const safeUrl = `${configuration.safeUrl}/v1/chains/${configuration.chainId}/safes/${safeAddress}/messages`;
   const allSnapshotMessages = await fetchAllPotentialsMessages(safeUrl);
@@ -75,12 +78,12 @@ export const syncBackends = async (safeAddressOrEns: string) => {
     (m) => m.status === "CONFIRMED" && m.preparedSignature
   );
 
-  console.log(fullySignedMessages.length, "fully signed snapshot messages found");
+  console.log(fullySignedMessages.length, "fully signed messages found");
 
   const nonExpiredMessages = fullySignedMessages.filter(
     (m) => +m.message.message.timestamp + configuration.snapshotDelayValidation > Date.now() / 1000
   );
-  console.log(nonExpiredMessages.length, "non expired snapshot messages found");
+  console.log(nonExpiredMessages.length, "non expired messages found");
 
   console.log("-".repeat(100));
   const messageResults: {

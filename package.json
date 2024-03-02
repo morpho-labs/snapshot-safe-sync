@@ -42,13 +42,12 @@
   },
   "homepage": "https://github.com/morpho-labs/snapshot-safe-synchronizer#readme",
   "dependencies": {
-    "@inquirer/prompts": "^2.1.1",
     "@snapshot-labs/snapshot.js": "^0.5.4",
-    "@types/node": "^20.5.2",
-    "ethers": "^5.7.2",
-    "ts-node": "^10.9.1"
+    "ethers": "^6.11.1"
   },
   "devDependencies": {
+    "@types/node": "^20.5.2",
+    "ts-node": "^10.9.1",
     "@trivago/prettier-plugin-sort-imports": "^4.1.1",
     "@types/command-line-args": "^5.2.0",
     "@types/command-line-usage": "^5.0.2",

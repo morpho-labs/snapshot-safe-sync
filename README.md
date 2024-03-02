@@ -25,19 +25,29 @@ You can run the script on the fly with npx:
 npx snapshot-safe-sync <address-or-ens>
 ```
 
+The CLI accept an optional --rpc-url to resolve the ENS. By default, the script is using the MAINNET_RPC_URL env variable, and fallbacks on the the default rpc of `ethers`
+
+```bash
+npx snapshot-safe-sync <address-or-ens> --rpc-url <rpc-url>
+```
+
 Or call the function in a script:
 
 ```js
+const { getDefaultProvider } = require('ethers');
 const { syncBackends } = require('snapshot-safe-sync');
 
-syncBackends('<address-or-ens>');
+const provider = getDefaultProvider();
+
+syncBackends('<address-or-ens>', provider);
 ```
 Or, with a module import:
 
 ```js
+import { getDefaultProvider } from 'ethers';
 import { syncBackends } from 'snapshot-safe-sync';
 
-syncBackends('<address-or-ens>');
+syncBackends('<address-or-ens>', getDefaultProvider(process.env.MAINNET_RPC_URL));
 ```
 
 you can set a RPC_URL to resolve the ENS. By default, the script is using the default rpc of `ethers`
